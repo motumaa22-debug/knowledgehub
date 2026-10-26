@@ -1,0 +1,12 @@
+# ==============================================================================
+# KnowledgeHub — Protected Upload Storage
+# Requirement: Do not allow uploaded files to execute as PHP or executable scripts.
+# ==============================================================================
+
+# Disable directory listing
+Options -Indexes -ExecCGI
+
+# Deny direct HTTP web access to all files in storage directory.
+# Physical files are safely read and served only through /api/contents/download.php after JWT authentication.
+Require all denied
+

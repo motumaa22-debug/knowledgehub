@@ -1,0 +1,15 @@
+# ==============================================================================
+# KnowledgeHub — Backend Apache Configuration (.htaccess)
+# ==============================================================================
+
+# Disable directory browsing
+Options -Indexes
+
+# Follow symbolic links
+Options +FollowSymLinks
+
+# Prevent direct access to sensitive configuration files
+<FilesMatch "^\.env|database\.php|\.sql$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
