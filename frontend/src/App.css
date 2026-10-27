@@ -1773,6 +1773,11 @@
   animation: fadeInOverlay 0.2s ease forwards;
 }
 
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 @keyframes fadeInOverlay {
   from { opacity: 0; }
   to   { opacity: 1; }

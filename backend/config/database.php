@@ -9,6 +9,7 @@
 
 class Database {
     private string $host;
+    private string $port;
     private string $db_name;
     private string $username;
     private string $password;
@@ -16,8 +17,16 @@ class Database {
     private ?PDO $conn = null;
 
     public function __construct() {
-        // Read configuration with safe defaults for local XAMPP
-        $this->host = getenv('DB_HOST') ?: '127.0.0.1';
+        // Read configuration with safe defaults for local XAMPP or Clever Cloud / Render
+        $rawHost = getenv('DB_HOST') ?: '127.0.0.1';
+        if (str_contains($rawHost, ':')) {
+            [$h, $p] = explode(':', $rawHost, 2);
+            $this->host = $h;
+            $this->port = $p;
+        } else {
+            $this->host = $rawHost;
+            $this->port = getenv('DB_PORT') ?: '3306';
+        }
         $this->db_name = getenv('DB_NAME') ?: 'knowledgehub_db';
         $this->username = getenv('DB_USER') ?: 'root';
         $this->password = getenv('DB_PASS') !== false ? getenv('DB_PASS') : '1234';
@@ -35,12 +44,13 @@ class Database {
             return $this->conn;
         }
 
-        $dsn = "mysql:host={$this->host};dbname={$this->db_name};charset={$this->charset}";
+        $dsn = "mysql:host={$this->host};port={$this->port};dbname={$this->db_name};charset={$this->charset}";
 
         $options = [
             PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             PDO::ATTR_EMULATE_PREPARES   => false,
+            PDO::ATTR_TIMEOUT            => 10,
         ];
 
         try {

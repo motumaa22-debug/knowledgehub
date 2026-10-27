@@ -32,12 +32,18 @@ export async function apiRequest(endpoint, options = {}) {
     body = JSON.stringify(body);
   }
 
+  // 40-second timeout to handle Render cold start while avoiding indefinite hanging
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), options.timeout || 40000);
+
   try {
     const response = await fetch(url, {
       ...options,
       headers,
       body,
+      signal: controller.signal,
     });
+    clearTimeout(timeoutId);
 
     const data = await response.json().catch(() => null);
 
@@ -48,6 +54,11 @@ export async function apiRequest(endpoint, options = {}) {
 
     return data;
   } catch (error) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      console.warn(`[KnowledgeHub API] Request to ${endpoint} timed out. Cloud backend may be waking up.`);
+      throw new Error('Server is currently waking up from cold sleep. Please wait a few moments and try again.');
+    }
     console.error(`API Error [${endpoint}]:`, error.message);
     throw error;
   }

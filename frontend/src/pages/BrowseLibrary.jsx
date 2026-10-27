@@ -17,9 +17,16 @@ export default function BrowseLibrary() {
   const selectedCategory = searchParams.get('category') || 'all';
   const initialSearch = searchParams.get('search') || '';
 
+  const DEFAULT_CATEGORIES = [
+    { id: 1, name: 'Books (PDF)', slug: 'books' },
+    { id: 2, name: 'Traditional Proverbs', slug: 'proverbs' },
+    { id: 3, name: 'Poems', slug: 'poems' },
+    { id: 4, name: 'Fiction & Short Stories', slug: 'fiction' },
+  ];
+
   const [activeTab, setActiveTab] = useState(selectedCategory);
   const [searchTerm, setSearchTerm] = useState(initialSearch);
-  const [categories, setCategories] = useState([]);
+  const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');

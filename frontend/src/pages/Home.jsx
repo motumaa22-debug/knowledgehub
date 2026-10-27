@@ -25,49 +25,62 @@ export default function Home() {
   const { t, language } = useLanguage();
   const { isAuthenticated } = useAuth();
 
-  const [categories, setCategories] = useState([]);
+  // Instant default categories so landing page renders immediately without waiting
+  const DEFAULT_CATEGORIES = [
+    { id: 1, title: 'Books (PDF)', slug: 'books', icon: '📖', description: 'Digital books, historical manuscripts, textbooks, and documentation in PDF format.', count: 1 },
+    { id: 2, title: 'Traditional Proverbs', slug: 'proverbs', icon: '💬', description: 'Cultural proverbs, ancestral wisdom, and folklore expressions passed across generations.', count: 1 },
+    { id: 3, title: 'Poems', slug: 'poems', icon: '✒️', description: 'Original poetry, rhythmic verse, lyrical community compositions, and spoken word.', count: 1 },
+    { id: 4, title: 'Fiction & Short Stories', slug: 'fiction', icon: '🎭', description: 'Creative fiction, short stories, folk narratives, and serialized tales.', count: 1 },
+  ];
+
+  const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
   const [featuredItems, setFeaturedItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   // FAQ Accordion State (0 is open by default)
   const [openFaq, setOpenFaq] = useState(0);
 
-  useEffect(() => {
-    async function loadHomeData() {
-      try {
-        setLoading(true);
-        const [catRes, contentRes] = await Promise.all([
-          contentService.getCategories().catch(() => ({ data: [] })),
-          contentService.getContents().catch(() => ({ data: [] })),
-        ]);
+  const loadHomeData = async () => {
+    try {
+      setLoading(true);
+      setLoadError(false);
+      const [catRes, contentRes] = await Promise.all([
+        contentService.getCategories().catch(() => null),
+        contentService.getContents().catch(() => null),
+      ]);
 
-        if (catRes && catRes.data) {
-          const iconMap = {
-            books: '📖',
-            proverbs: '💬',
-            poems: '✒️',
-            fiction: '🎭',
-          };
+      if (catRes && catRes.data && catRes.data.length > 0) {
+        const iconMap = {
+          books: '📖',
+          proverbs: '💬',
+          poems: '✒️',
+          fiction: '🎭',
+        };
 
-          const mappedCategories = catRes.data.map((c) => ({
-            ...c,
-            title: c.name,
-            icon: iconMap[c.slug] || '📚',
-            count: c.content_count !== undefined ? Number(c.content_count) : 0,
-          }));
-          setCategories(mappedCategories);
-        }
-
-        if (contentRes && contentRes.data) {
-          setFeaturedItems(contentRes.data.slice(0, 6));
-        }
-      } catch (err) {
-        console.error('Failed to load landing page data:', err);
-      } finally {
-        setLoading(false);
+        const mappedCategories = catRes.data.map((c) => ({
+          ...c,
+          title: c.name,
+          icon: iconMap[c.slug] || '📚',
+          count: c.content_count !== undefined ? Number(c.content_count) : 0,
+        }));
+        setCategories(mappedCategories);
       }
-    }
 
+      if (contentRes && contentRes.data && contentRes.data.length > 0) {
+        setFeaturedItems(contentRes.data.slice(0, 6));
+      } else if (!contentRes) {
+        setLoadError(true);
+      }
+    } catch (err) {
+      console.error('Failed to load landing page data:', err);
+      setLoadError(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     loadHomeData();
   }, []);
 
@@ -579,24 +592,18 @@ export default function Home() {
             </Link>
           </div>
 
-          {loading && categories.length === 0 ? (
-            <div className="placeholder-box">
-              <p>Loading library categories from database...</p>
-            </div>
-          ) : (
-            <div className="category-grid">
-              {categories.map((cat) => (
-                <CategoryCard
-                  key={cat.id || cat.slug}
-                  title={cat.title}
-                  slug={cat.slug}
-                  icon={cat.icon}
-                  description={cat.description}
-                  count={cat.count}
-                />
-              ))}
-            </div>
-          )}
+          <div className="category-grid">
+            {categories.map((cat) => (
+              <CategoryCard
+                key={cat.id || cat.slug}
+                title={cat.title}
+                slug={cat.slug}
+                icon={cat.icon}
+                description={cat.description}
+                count={cat.count}
+              />
+            ))}
+          </div>
         </section>
 
         {/* =========================================================================
@@ -616,8 +623,33 @@ export default function Home() {
           </div>
 
           {loading && featuredItems.length === 0 ? (
-            <div className="placeholder-box">
-              <p>Loading library works from database...</p>
+            <div className="placeholder-box" style={{ padding: '2.5rem 1.5rem', textAlign: 'center' }}>
+              <div
+                style={{
+                  width: '36px',
+                  height: '36px',
+                  border: '3px solid #e2e8f0',
+                  borderTopColor: 'var(--color-primary)',
+                  borderRadius: '50%',
+                  margin: '0 auto 1rem',
+                  animation: 'spin 0.8s linear infinite',
+                }}
+              />
+              <p style={{ fontWeight: 700, color: 'var(--color-primary-dark)', marginBottom: '0.35rem' }}>
+                Connecting to KnowledgeHub Cloud Database...
+              </p>
+              <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', maxWidth: '440px', margin: '0 auto' }}>
+                Cloud servers on free tier enter sleep mode when idle and wake up within 30–50 seconds on first request.
+              </p>
+            </div>
+          ) : loadError && featuredItems.length === 0 ? (
+            <div className="placeholder-box" style={{ padding: '2rem 1.5rem', textAlign: 'center' }}>
+              <p style={{ fontWeight: 600, color: 'var(--color-warning)', marginBottom: '0.75rem' }}>
+                Server is currently waking up or temporarily unreachable.
+              </p>
+              <button onClick={loadHomeData} className="btn btn-outline" style={{ fontSize: '0.85rem' }}>
+                🔄 Retry Connection
+              </button>
             </div>
           ) : featuredItems.length === 0 ? (
             <div className="placeholder-box">
