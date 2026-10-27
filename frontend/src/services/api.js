@@ -5,16 +5,25 @@
 
 const rawBase = import.meta.env.VITE_API_BASE_URL || '';
 // Auto-correct missing -8wwr suffix if user configured the generic name
-const normalizedBase = rawBase.includes('knowledgehub-backend.onrender.com') && !rawBase.includes('-8wwr')
+const correctedBase = rawBase.includes('knowledgehub-backend.onrender.com') && !rawBase.includes('-8wwr')
   ? rawBase.replace('knowledgehub-backend.onrender.com', 'knowledgehub-backend-8wwr.onrender.com')
   : rawBase;
 
-export const API_BASE_URL = 
-  (normalizedBase && !normalizedBase.includes('localhost'))
-    ? normalizedBase
-    : (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
-        ? 'https://knowledgehub-backend-8wwr.onrender.com/api'
-        : (normalizedBase || 'http://localhost/knowledgehub/backend/api'));
+let determinedBase = (correctedBase && !correctedBase.includes('localhost'))
+  ? correctedBase
+  : (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
+      ? 'https://knowledgehub-backend-8wwr.onrender.com/api'
+      : (correctedBase || 'http://localhost/knowledgehub/backend/api'));
+
+// Strip trailing slashes
+determinedBase = determinedBase.replace(/\/+$/, '');
+
+// Ensure /api is ALWAYS present at the end
+if (!determinedBase.endsWith('/api')) {
+  determinedBase = `${determinedBase}/api`;
+}
+
+export const API_BASE_URL = determinedBase;
 
 /**
  * Universal fetch wrapper

@@ -8,11 +8,16 @@ Options -Indexes
 # Follow symbolic links
 Options +FollowSymLinks
 
-# Pass Authorization header to PHP in Apache
+# Pass Authorization header to PHP in Apache and route to /api/ if omitted
 <IfModule mod_rewrite.c>
     RewriteEngine On
     RewriteCond %{HTTP:Authorization} ^(.*)
     RewriteRule .* - [e=HTTP_AUTHORIZATION:%1]
+
+    # If request doesn't start with /api, and matching file exists in /api, rewrite to /api
+    RewriteCond %{REQUEST_URI} !^/api/
+    RewriteCond %{REQUEST_URI} ^/(auth|categories|contents|admin|translate)/ [NC]
+    RewriteRule ^(.*)$ /api/$1 [L,QSA]
 </IfModule>
 
 <IfModule mod_setenvif.c>
