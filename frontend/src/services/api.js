@@ -33,9 +33,9 @@ export async function apiRequest(endpoint, options = {}) {
     body = JSON.stringify(body);
   }
 
-  // 40-second timeout to handle Render cold start while avoiding indefinite hanging
+  // 90-second timeout to handle Render free-tier cold starts (which can take 50–75s) without prematurely aborting
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), options.timeout || 40000);
+  const timeoutId = setTimeout(() => controller.abort(), options.timeout || 90000);
 
   try {
     const response = await fetch(url, {
