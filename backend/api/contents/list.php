@@ -84,9 +84,9 @@ try {
     $stmt->execute($params);
     $rows = $stmt->fetchAll();
 
-    // Map excerpt
+    // Map excerpt safely
     $contents = array_map(function($item) {
-        $text = $item['body_text'] ?? '';
+        $text = (string)($item['body_text'] ?? '');
         $item['excerpt'] = mb_strlen($text) > 160 ? mb_substr($text, 0, 160) . '...' : $text;
         return $item;
     }, $rows);
@@ -96,7 +96,7 @@ try {
         'count'  => count($contents),
         'data'   => $contents
     ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-} catch (PDOException $e) {
+} catch (Throwable $e) {
     http_response_code(500);
     echo json_encode(['status' => 'error', 'message' => 'Failed to fetch content list: ' . $e->getMessage()]);
 }
