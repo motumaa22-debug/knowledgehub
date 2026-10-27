@@ -44,14 +44,24 @@ try {
         exit;
     }
 
-    // Administrators are always pre-verified
+    // Administrators are always pre-verified — log in immediately
     if ($user['role'] === 'admin') {
-        if ((int)($user['is_verified'] ?? 0) === 0) {
-            try {
-                $pdo->prepare('UPDATE users SET is_verified = 1 WHERE id = ?')->execute([$user['id']]);
-                $user['is_verified'] = 1;
-            } catch (Throwable $ignore) {}
-        }
+        $userData = [
+            'id'       => (int)$user['id'],
+            'username' => $user['username'],
+            'email'    => $user['email'],
+            'role'     => 'admin'
+        ];
+
+        $token = generateToken($userData);
+
+        echo json_encode([
+            'status'  => 'success',
+            'message' => 'Logged in successfully as Administrator!',
+            'token'   => $token,
+            'user'    => $userData
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        exit;
     }
 
     // Check if user is verified (standard members only)

@@ -55,17 +55,6 @@ class Database {
 
         try {
             $this->conn = new PDO($dsn, $this->username, $this->password, $options);
-
-            // Auto-heal schema differences (safe in MySQL 8 / MariaDB)
-            try {
-                $this->conn->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS phone_number VARCHAR(30) NULL");
-                $this->conn->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS code_expires_at DATETIME NULL");
-                $this->conn->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_expires_at DATETIME NULL");
-                $this->conn->exec("UPDATE users SET is_verified = 1 WHERE role = 'admin'");
-            } catch (Throwable $t) {
-                // Ignore if already configured or restricted
-            }
-
             return $this->conn;
         } catch (PDOException $e) {
             http_response_code(500);
