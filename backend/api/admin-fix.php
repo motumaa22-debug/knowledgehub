@@ -31,27 +31,43 @@ try {
         WHERE username = 'admin' OR role = 'admin'
     ");
     $stmt->execute([$newHash]);
-    $rowsUpdated = $stmt->rowCount();
+    $rowsAdmin = $stmt->rowCount();
 
-    $result['actions'][] = "Updated {$rowsUpdated} admin row(s): password_hash refreshed, is_verified=1 set.";
+    // Update contributor: correct password hash, set is_verified=1
+    $stmt = $pdo->prepare("
+        UPDATE users
+        SET password_hash = ?, is_verified = 1
+        WHERE username = 'contributor'
+    ");
+    $stmt->execute([$newHash]);
+    $rowsContributor = $stmt->rowCount();
+
+    // If contributor didn't exist, create it
+    if ($rowsContributor === 0) {
+        $check = $pdo->query("SELECT id FROM users WHERE username = 'contributor' LIMIT 1")->fetch();
+        if (!$check) {
+            $pdo->prepare("INSERT INTO users (username, email, password_hash, role, is_verified) VALUES ('contributor', 'reader@knowledgehub.org', ?, 'user', 1)")
+                ->execute([$newHash]);
+            $result['actions'][] = 'Created contributor demo account (password: password123, verified: 1).';
+        }
+    }
+
+    $result['actions'][] = "Admin updated: {$rowsAdmin} row(s). Contributor updated: {$rowsContributor} row(s).";
 
     // Verify admin can now be found and password matches
     $admin = $pdo->query("SELECT id, username, email, role, is_verified, password_hash FROM users WHERE username = 'admin' LIMIT 1")->fetch();
-    if ($admin) {
-        $passwordOk = password_verify('password123', $admin['password_hash']);
-        $result['admin_found'] = true;
-        $result['admin_verified'] = (int)$admin['is_verified'] === 1;
-        $result['password_matches'] = $passwordOk;
-        $result['status'] = ($passwordOk && (int)$admin['is_verified'] === 1) ? 'fixed' : 'partial';
-    } else {
-        // Admin row doesn't exist — insert it
-        $insertHash = password_hash('password123', PASSWORD_BCRYPT);
-        $pdo->prepare("INSERT INTO users (username, email, password_hash, role, is_verified) VALUES ('admin', 'admin@knowledgehub.org', ?, 'admin', 1)")->execute([$insertHash]);
-        $result['actions'][] = 'Admin row did not exist — created fresh admin account.';
-        $result['status'] = 'created';
-    }
+    $contributor = $pdo->query("SELECT id, username, email, role, is_verified, password_hash FROM users WHERE username = 'contributor' LIMIT 1")->fetch();
 
-    $result['message'] = 'Admin fix complete. Login with username: admin, password: password123';
+    $result['admin_found'] = (bool)$admin;
+    $result['admin_verified'] = $admin ? ((int)$admin['is_verified'] === 1) : false;
+    $result['admin_password_ok'] = $admin ? password_verify('password123', $admin['password_hash']) : false;
+
+    $result['contributor_found'] = (bool)$contributor;
+    $result['contributor_verified'] = $contributor ? ((int)$contributor['is_verified'] === 1) : false;
+    $result['contributor_password_ok'] = $contributor ? password_verify('password123', $contributor['password_hash']) : false;
+
+    $result['status'] = ($result['admin_password_ok'] && $result['contributor_password_ok']) ? 'all_fixed' : 'partial';
+    $result['message'] = 'Accounts ready. Login: admin/password123 (Administrator) or contributor/password123 (Contributor).';
 
 } catch (Throwable $e) {
     $result['status'] = 'error';
