@@ -7,8 +7,22 @@
 require_once __DIR__ . '/../../config/cors.php';
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../config/jwt.php';
-require_once __DIR__ . '/../../services/emailService.php';
-require_once __DIR__ . '/../../services/smsService.php';
+
+// Lazy-load email/SMS only when needed (avoids fatal crash if curl missing)
+function loadEmailService() {
+    static $loaded = false;
+    if (!$loaded) {
+        require_once __DIR__ . '/../../services/emailService.php';
+        $loaded = true;
+    }
+}
+function loadSmsService() {
+    static $loaded = false;
+    if (!$loaded && function_exists('curl_init')) {
+        require_once __DIR__ . '/../../services/smsService.php';
+        $loaded = true;
+    }
+}
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -92,14 +106,20 @@ try {
 
             // Dispatch Email OTP to inbox
             try {
+                loadEmailService();
                 EmailService::sendOtpEmail($user['email'], $code, $user['username']);
             } catch (Throwable $e) {
                 // Email failure should not hang auth
             }
 
-            // Optional SMS if user has a phone number
+            // Optional SMS if user has a phone number (only if curl extension available)
             if (!empty($user['phone_number'])) {
-                @SmsService::sendOtp($user['phone_number'], $code, $user['username']);
+                try {
+                    loadSmsService();
+                    if (class_exists('SmsService')) {
+                        SmsService::sendOtp($user['phone_number'], $code, $user['username']);
+                    }
+                } catch (Throwable $ignore) {}
             }
         }
 

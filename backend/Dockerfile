@@ -3,8 +3,12 @@ FROM php:8.2-apache
 # Enable Apache mod_rewrite and headers
 RUN a2enmod rewrite headers
 
-# Install PHP extensions needed by KnowledgeHub
-RUN docker-php-ext-install pdo pdo_mysql mysqli
+# Install PHP extensions needed by KnowledgeHub (pdo_mysql + curl for SMS/email gateways)
+RUN docker-php-ext-install pdo pdo_mysql mysqli \
+    && apt-get update -qq \
+    && apt-get install -y --no-install-recommends libcurl4-openssl-dev \
+    && docker-php-ext-install curl \
+    && rm -rf /var/lib/apt/lists/*
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Apache VirtualHost — explicit config so .htaccess AllowOverride works

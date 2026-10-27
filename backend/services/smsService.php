@@ -5,6 +5,9 @@
  * 
  * Sends real SMS OTP codes to user mobile phones (Ethio Telecom, Safaricom, and international).
  * Supports AfroMessage, Twilio, Africa's Talking, and Android SIM SMS Gateways.
+ *
+ * NOTE: Requires PHP curl extension. If curl is unavailable, the class still loads
+ * but all send methods return false gracefully (no fatal error).
  */
 
 class SmsService {
@@ -103,6 +106,7 @@ class SmsService {
      * AfroMessage Ethiopian SMS Gateway Dispatcher
      */
     private static function sendViaAfroMessage($url, $token, $to, $message) {
+        if (!function_exists('curl_init')) return false;
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_POST, true);
@@ -127,6 +131,7 @@ class SmsService {
      * Twilio REST API Dispatcher
      */
     private static function sendViaTwilio($sid, $token, $from, $to, $body) {
+        if (!function_exists('curl_init')) return false;
         $url = "https://api.twilio.com/2010-04-01/Accounts/{$sid}/Messages.json";
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
@@ -149,6 +154,7 @@ class SmsService {
      * Android SMS Gateway Dispatcher (Uses your Android phone's SIM)
      */
     private static function sendViaAndroidGateway($url, $apiKey, $to, $body) {
+        if (!function_exists('curl_init')) return false;
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_POST, true);
