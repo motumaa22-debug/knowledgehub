@@ -27,9 +27,13 @@ class Database {
             $this->host = $rawHost;
             $this->port = getenv('DB_PORT') ?: '3306';
         }
-        $this->db_name = getenv('DB_NAME') ?: 'knowledgehub_db';
-        $this->username = getenv('DB_USER') ?: 'root';
-        $this->password = getenv('DB_PASS') !== false ? getenv('DB_PASS') : '1234';
+        $this->db_name = getenv('DB_NAME') ?: getenv('DB_DATABASE') ?: 'knowledgehub_db';
+        $this->username = getenv('DB_USER') ?: getenv('DB_USERNAME') ?: 'root';
+        $pass = getenv('DB_PASS');
+        if ($pass === false) {
+            $pass = getenv('DB_PASSWORD');
+        }
+        $this->password = ($pass !== false) ? $pass : '1234';
         $this->charset = 'utf8mb4';
     }
 

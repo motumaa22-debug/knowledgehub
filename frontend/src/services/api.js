@@ -17,6 +17,7 @@ export const API_BASE_URL =
  */
 export async function apiRequest(endpoint, options = {}) {
   const url = `${API_BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+  console.log(`[KnowledgeHub API] ${options.method || 'GET'} -> ${url}`);
   
   const token = localStorage.getItem('kh_token');
   const headers = {
