@@ -30,7 +30,7 @@ if (empty($usernameOrEmail) || empty($password)) {
 try {
     $pdo = getDB();
     $stmt = $pdo->prepare('
-        SELECT id, username, email, password_hash, role, is_verified, verification_code, code_expires_at 
+        SELECT * 
         FROM users 
         WHERE username = ? OR email = ? 
         LIMIT 1
@@ -44,18 +44,41 @@ try {
         exit;
     }
 
-    // Check if user is verified
-    if ((int)$user['is_verified'] === 0) {
+    // Administrators are always pre-verified
+    if ($user['role'] === 'admin') {
+        if ((int)($user['is_verified'] ?? 0) === 0) {
+            try {
+                $pdo->prepare('UPDATE users SET is_verified = 1 WHERE id = ?')->execute([$user['id']]);
+                $user['is_verified'] = 1;
+            } catch (Throwable $ignore) {}
+        }
+    }
+
+    // Check if user is verified (standard members only)
+    if ($user['role'] !== 'admin' && (int)($user['is_verified'] ?? 1) === 0) {
         // Generate a new 4-digit code if expired or missing
-        $code = $user['verification_code'];
-        if (!$code || ($user['code_expires_at'] && strtotime($user['code_expires_at']) < time())) {
+        $code = $user['verification_code'] ?? null;
+        $expiresAtVal = $user['code_expires_at'] ?? $user['verification_expires_at'] ?? null;
+
+        if (!$code || ($expiresAtVal && strtotime($expiresAtVal) < time())) {
             $code = str_pad((string)random_int(1000, 9999), 4, '0', STR_PAD_LEFT);
             $expiresAt = date('Y-m-d H:i:s', time() + (15 * 60));
-            $update = $pdo->prepare('UPDATE users SET verification_code = ?, code_expires_at = ? WHERE id = ?');
-            $update->execute([$code, $expiresAt, $user['id']]);
+            try {
+                $update = $pdo->prepare('UPDATE users SET verification_code = ?, code_expires_at = ?, verification_expires_at = ? WHERE id = ?');
+                $update->execute([$code, $expiresAt, $expiresAt, $user['id']]);
+            } catch (Throwable $e) {
+                try {
+                    $update = $pdo->prepare('UPDATE users SET verification_code = ? WHERE id = ?');
+                    $update->execute([$code, $user['id']]);
+                } catch (Throwable $ignore) {}
+            }
 
             // Dispatch Email OTP to inbox
-            EmailService::sendOtpEmail($user['email'], $code, $user['username']);
+            try {
+                EmailService::sendOtpEmail($user['email'], $code, $user['username']);
+            } catch (Throwable $e) {
+                // Email failure should not hang auth
+            }
 
             // Optional SMS if user has a phone number
             if (!empty($user['phone_number'])) {
@@ -68,7 +91,7 @@ try {
             'status'       => 'unverified',
             'message'      => 'Your account is pending verification. Please enter the 4-digit code sent to your email inbox.',
             'email'        => $user['email'],
-            'phone_number' => $user['phone_number'],
+            'phone_number' => $user['phone_number'] ?? '',
             'username'     => $user['username']
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
         exit;
@@ -90,7 +113,7 @@ try {
         'user'    => $userData
     ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 
-} catch (PDOException $e) {
+} catch (Throwable $e) {
     http_response_code(500);
     echo json_encode(['status' => 'error', 'message' => 'Login error: ' . $e->getMessage()]);
 }

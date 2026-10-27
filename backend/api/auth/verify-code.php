@@ -40,16 +40,17 @@ try {
     $last9 = substr($cleanPhone, -9);
 
     $stmt = $pdo->prepare('
-        SELECT id, username, email, phone_number, role, is_verified, verification_code, code_expires_at 
+        SELECT * 
         FROM users 
         WHERE email = ? 
+           OR username = ?
            OR phone_number = ? 
            OR phone_number = ? 
            OR phone_number LIKE ? 
         ORDER BY id DESC 
         LIMIT 1
     ');
-    $stmt->execute([$identifier, $identifier, $normalizedPhone, '%' . $last9]);
+    $stmt->execute([$identifier, $identifier, $identifier, $normalizedPhone, '%' . $last9]);
     $user = $stmt->fetch();
 
     if (!$user) {
@@ -97,9 +98,14 @@ try {
         exit;
     }
 
-    // Mark as verified
-    $updateStmt = $pdo->prepare('UPDATE users SET is_verified = 1, verification_code = NULL, code_expires_at = NULL WHERE id = ?');
-    $updateStmt->execute([$user['id']]);
+    // Mark as verified safely
+    try {
+        $updateStmt = $pdo->prepare('UPDATE users SET is_verified = 1, verification_code = NULL, code_expires_at = NULL, verification_expires_at = NULL WHERE id = ?');
+        $updateStmt->execute([$user['id']]);
+    } catch (Throwable $e) {
+        $updateStmt = $pdo->prepare('UPDATE users SET is_verified = 1, verification_code = NULL WHERE id = ?');
+        $updateStmt->execute([$user['id']]);
+    }
 
     $userData = [
         'id'           => (int)$user['id'],

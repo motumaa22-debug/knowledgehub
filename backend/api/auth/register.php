@@ -76,20 +76,37 @@ try {
         }
 
         // If unverified prior registration, update existing record with fresh OTP
-        $updateStmt = $pdo->prepare('
-            UPDATE users 
-            SET username = ?, email = ?, phone_number = ?, password_hash = ?, verification_code = ?, code_expires_at = ? 
-            WHERE id = ?
-        ');
-        $updateStmt->execute([$username, $email, $normalizedPhone, $passwordHash, $verificationCode, $expiresAt, $existing['id']]);
+        try {
+            $updateStmt = $pdo->prepare('
+                UPDATE users 
+                SET username = ?, email = ?, password_hash = ?, verification_code = ?, code_expires_at = ?, verification_expires_at = ?
+                WHERE id = ?
+            ');
+            $updateStmt->execute([$username, $email, $passwordHash, $verificationCode, $expiresAt, $expiresAt, $existing['id']]);
+        } catch (Throwable $e) {
+            $updateStmt = $pdo->prepare('
+                UPDATE users 
+                SET username = ?, email = ?, password_hash = ?, verification_code = ?
+                WHERE id = ?
+            ');
+            $updateStmt->execute([$username, $email, $passwordHash, $verificationCode, $existing['id']]);
+        }
         $userId = (int)$existing['id'];
     } else {
         // Insert new user
-        $insertStmt = $pdo->prepare('
-            INSERT INTO users (username, email, phone_number, password_hash, role, is_verified, verification_code, code_expires_at) 
-            VALUES (?, ?, ?, ?, "user", 0, ?, ?)
-        ');
-        $insertStmt->execute([$username, $email, $normalizedPhone, $passwordHash, $verificationCode, $expiresAt]);
+        try {
+            $insertStmt = $pdo->prepare('
+                INSERT INTO users (username, email, password_hash, role, is_verified, verification_code, code_expires_at, verification_expires_at) 
+                VALUES (?, ?, ?, "user", 0, ?, ?, ?)
+            ');
+            $insertStmt->execute([$username, $email, $passwordHash, $verificationCode, $expiresAt, $expiresAt]);
+        } catch (Throwable $e) {
+            $insertStmt = $pdo->prepare('
+                INSERT INTO users (username, email, password_hash, role, is_verified, verification_code) 
+                VALUES (?, ?, ?, "user", 0, ?)
+            ');
+            $insertStmt->execute([$username, $email, $passwordHash, $verificationCode]);
+        }
         $userId = (int)$pdo->lastInsertId();
     }
 

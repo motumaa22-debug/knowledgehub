@@ -157,6 +157,9 @@ class EmailService {
         $fp = @fsockopen($socketHost, $port, $errno, $errstr, $timeout);
         if (!$fp) return false;
 
+        // Set socket timeout so reads/writes never block PHP
+        stream_set_timeout($fp, 4);
+
         $read = function() use ($fp) {
             $data = '';
             while ($str = fgets($fp, 515)) {

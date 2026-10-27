@@ -58,8 +58,13 @@ try {
     $newCode = str_pad((string)random_int(1000, 9999), 4, '0', STR_PAD_LEFT);
     $expiresAt = date('Y-m-d H:i:s', time() + (15 * 60)); // 15 mins
 
-    $updateStmt = $pdo->prepare('UPDATE users SET verification_code = ?, code_expires_at = ? WHERE id = ?');
-    $updateStmt->execute([$newCode, $expiresAt, $user['id']]);
+    try {
+        $updateStmt = $pdo->prepare('UPDATE users SET verification_code = ?, code_expires_at = ?, verification_expires_at = ? WHERE id = ?');
+        $updateStmt->execute([$newCode, $expiresAt, $expiresAt, $user['id']]);
+    } catch (Throwable $e) {
+        $updateStmt = $pdo->prepare('UPDATE users SET verification_code = ? WHERE id = ?');
+        $updateStmt->execute([$newCode, $user['id']]);
+    }
 
     // 1. Primary: Dispatch Email OTP to inbox
     EmailService::sendOtpEmail($user['email'], $newCode, $user['username']);
