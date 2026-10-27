@@ -3,19 +3,35 @@
  * Centralized fetch client for backend communication with JSON responses.
  */
 
-const rawBase = import.meta.env.VITE_API_BASE_URL || '';
+let rawBase = import.meta.env.VITE_API_BASE_URL || '';
+
+// Clean up any stray quotes, spaces, or trailing slashes
+rawBase = rawBase.trim().replace(/^['"]|['"]$/g, '').replace(/\/+$/, '');
+
 // Auto-correct missing -8wwr suffix if user configured the generic name
-const correctedBase = rawBase.includes('knowledgehub-backend.onrender.com') && !rawBase.includes('-8wwr')
+let correctedBase = rawBase.includes('knowledgehub-backend.onrender.com') && !rawBase.includes('-8wwr')
   ? rawBase.replace('knowledgehub-backend.onrender.com', 'knowledgehub-backend-8wwr.onrender.com')
   : rawBase;
 
-let determinedBase = (correctedBase && !correctedBase.includes('localhost'))
-  ? correctedBase
-  : (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
-      ? 'https://knowledgehub-backend-8wwr.onrender.com/api'
-      : (correctedBase || 'http://localhost/knowledgehub/backend/api'));
+// Fallback to production backend URL if empty or local placeholder on cloud
+let determinedBase = correctedBase;
+if (!determinedBase || (determinedBase.includes('localhost') && typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')) {
+  determinedBase = 'https://knowledgehub-backend-8wwr.onrender.com/api';
+}
 
-// Strip trailing slashes
+// CRITICAL: Ensure URL always has a scheme (http:// or https://)
+// Without https://, browsers treat "knowledgehub-backend-8wwr.onrender.com" as a relative path
+// on the frontend host (e.g. https://knowledgehub-frontend.onrender.com/knowledgehub-backend...),
+// causing 404s and empty 200 responses!
+if (!determinedBase.startsWith('http://') && !determinedBase.startsWith('https://')) {
+  if (determinedBase.includes('localhost') || determinedBase.includes('127.0.0.1')) {
+    determinedBase = `http://${determinedBase}`;
+  } else {
+    determinedBase = `https://${determinedBase}`;
+  }
+}
+
+// Strip any trailing slashes again
 determinedBase = determinedBase.replace(/\/+$/, '');
 
 // Ensure /api is ALWAYS present at the end
@@ -74,6 +90,13 @@ export async function apiRequest(endpoint, options = {}) {
     if (!response.ok) {
       const errorMsg = data?.message || `Request failed with status ${response.status}`;
       throw new Error(errorMsg);
+    }
+
+    if (!data) {
+      if (!rawText.trim()) {
+        throw new Error(`Server returned an empty response (status ${response.status}) from: ${url}`);
+      }
+      throw new Error(`Server returned invalid response: ${rawText.substring(0, 100)}`);
     }
 
     return data;
