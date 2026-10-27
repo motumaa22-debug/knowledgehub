@@ -3,12 +3,18 @@
  * Centralized fetch client for backend communication with JSON responses.
  */
 
+const rawBase = import.meta.env.VITE_API_BASE_URL || '';
+// Auto-correct missing -8wwr suffix if user configured the generic name
+const normalizedBase = rawBase.includes('knowledgehub-backend.onrender.com') && !rawBase.includes('-8wwr')
+  ? rawBase.replace('knowledgehub-backend.onrender.com', 'knowledgehub-backend-8wwr.onrender.com')
+  : rawBase;
+
 export const API_BASE_URL = 
-  (import.meta.env.VITE_API_BASE_URL && !import.meta.env.VITE_API_BASE_URL.includes('localhost'))
-    ? import.meta.env.VITE_API_BASE_URL
+  (normalizedBase && !normalizedBase.includes('localhost'))
+    ? normalizedBase
     : (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
         ? 'https://knowledgehub-backend-8wwr.onrender.com/api'
-        : (import.meta.env.VITE_API_BASE_URL || 'http://localhost/knowledgehub/backend/api'));
+        : (normalizedBase || 'http://localhost/knowledgehub/backend/api'));
 
 /**
  * Universal fetch wrapper
