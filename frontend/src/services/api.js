@@ -61,7 +61,15 @@ export async function apiRequest(endpoint, options = {}) {
     });
     clearTimeout(timeoutId);
 
-    const data = await response.json().catch(() => null);
+    const rawText = await response.text();
+    console.log(`[KnowledgeHub API] Raw response from ${endpoint} (status ${response.status}):`, rawText.substring(0, 500));
+
+    let data = null;
+    try {
+      data = JSON.parse(rawText);
+    } catch (_) {
+      data = null;
+    }
 
     if (!response.ok) {
       const errorMsg = data?.message || `Request failed with status ${response.status}`;

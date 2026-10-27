@@ -49,7 +49,11 @@ export default function Login() {
           navigate(from, { replace: true });
         }
       } else {
-        setError(res?.message || 'Invalid server response.');
+        // Show real backend message, or detailed debug info
+        const debugInfo = res
+          ? `Backend returned: status="${res.status}", message="${res.message || 'none'}" — no token received.`
+          : 'No response received from server.';
+        setError(res?.message || debugInfo);
       }
     } catch (err) {
       setError(err.message || 'Login failed. Please check your credentials.');
