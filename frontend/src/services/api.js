@@ -3,7 +3,12 @@
  * Centralized fetch client for backend communication with JSON responses.
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost/knowledgehub/backend/api';
+export const API_BASE_URL = 
+  (import.meta.env.VITE_API_BASE_URL && !import.meta.env.VITE_API_BASE_URL.includes('localhost'))
+    ? import.meta.env.VITE_API_BASE_URL
+    : (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
+        ? 'https://knowledgehub-backend-8wwr.onrender.com/api'
+        : (import.meta.env.VITE_API_BASE_URL || 'http://localhost/knowledgehub/backend/api'));
 
 /**
  * Universal fetch wrapper

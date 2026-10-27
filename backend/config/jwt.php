@@ -6,7 +6,9 @@
 
 require_once __DIR__ . '/database.php';
 
-const SECRET_KEY = 'knowledgehub_secure_key_change_in_production_2026';
+function getSecretKey(): string {
+    return getenv('JWT_SECRET') ?: 'knowledgehub_secure_key_change_in_production_2026';
+}
 
 function generateToken(array $user): string {
     $payload = [
@@ -19,7 +21,7 @@ function generateToken(array $user): string {
     ];
 
     $base64Payload = base64_encode(json_encode($payload));
-    $signature = hash_hmac('sha256', $base64Payload, SECRET_KEY);
+    $signature = hash_hmac('sha256', $base64Payload, getSecretKey());
 
     return $base64Payload . '.' . $signature;
 }
@@ -35,7 +37,7 @@ function verifyToken(?string $token): ?array {
     }
 
     [$base64Payload, $signature] = $parts;
-    $expectedSignature = hash_hmac('sha256', $base64Payload, SECRET_KEY);
+    $expectedSignature = hash_hmac('sha256', $base64Payload, getSecretKey());
 
     if (!hash_equals($expectedSignature, $signature)) {
         return null; // Signature invalid
@@ -50,11 +52,14 @@ function verifyToken(?string $token): ?array {
 }
 
 function getAuthUser(): ?array {
-    $headers = getallheaders();
+    $headers = function_exists('getallheaders') ? getallheaders() : (function_exists('apache_request_headers') ? apache_request_headers() : []);
     $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? '';
 
     if (empty($authHeader) && isset($_SERVER['HTTP_AUTHORIZATION'])) {
         $authHeader = $_SERVER['HTTP_AUTHORIZATION'];
+    }
+    if (empty($authHeader) && isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
+        $authHeader = $_SERVER['REDIRECT_HTTP_AUTHORIZATION'];
     }
 
     if (preg_match('/Bearer\s+(\S+)/i', $authHeader, $matches)) {

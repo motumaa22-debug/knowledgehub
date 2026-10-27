@@ -4,6 +4,7 @@ import contentService from '../services/contentService';
 import TranslationWidget from '../components/TranslationWidget';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useAuth } from '../context/AuthContext';
+import { API_BASE_URL } from '../services/api';
 
 /**
  * ContentDetails Page
@@ -22,7 +23,7 @@ export default function ContentDetails() {
   const [isAuthError, setIsAuthError] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost/knowledgehub/backend/api';
+  const API_BASE = API_BASE_URL;
 
   useEffect(() => {
     async function loadContent() {

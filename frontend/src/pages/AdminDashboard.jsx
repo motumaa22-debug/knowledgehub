@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import contentService from '../services/contentService';
-import api from '../services/api';
+import api, { API_BASE_URL } from '../services/api';
 
 /**
  * AdminDashboard Page
@@ -16,7 +16,7 @@ export default function AdminDashboard() {
   const [actionSuccess, setActionSuccess] = useState('');
   const [adminNotes, setAdminNotes] = useState({});
 
-  const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost/knowledgehub/backend/api';
+  const API_BASE = API_BASE_URL;
   const backendRoot = API_BASE.replace(/\/api\/?$/, '');
 
   const loadSubmissions = async (status = activeTab) => {
