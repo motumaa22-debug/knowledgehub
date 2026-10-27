@@ -2,20 +2,18 @@
 # KnowledgeHub — Backend Apache Configuration (.htaccess)
 # ==============================================================================
 
-# Disable directory browsing
-Options -Indexes
-
-# Follow symbolic links
-Options +FollowSymLinks
-
-# Pass Authorization header to PHP in Apache and route to /api/ if omitted
 <IfModule mod_rewrite.c>
     RewriteEngine On
+
+    # Pass Authorization header through to PHP
     RewriteCond %{HTTP:Authorization} ^(.*)
     RewriteRule .* - [e=HTTP_AUTHORIZATION:%1]
 
-    # If request doesn't start with /api, and matching file exists in /api, rewrite to /api
-    RewriteCond %{REQUEST_URI} !^/api/
+    # If request path starts with /api/, serve it directly (no rewrite needed)
+    RewriteCond %{REQUEST_URI} ^/api/ [NC]
+    RewriteRule ^ - [L]
+
+    # If request path is a bare route without /api/ prefix, add it
     RewriteCond %{REQUEST_URI} ^/(auth|categories|contents|admin|translate)/ [NC]
     RewriteRule ^(.*)$ /api/$1 [L,QSA]
 </IfModule>
@@ -25,7 +23,7 @@ Options +FollowSymLinks
 </IfModule>
 
 # Prevent direct access to sensitive configuration files
-<FilesMatch "^\.env|database\.php|\.sql$">
+<FilesMatch "(\.env|database\.php|\.sql)$">
     Order allow,deny
     Deny from all
 </FilesMatch>
