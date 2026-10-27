@@ -15,8 +15,9 @@ RUN mkdir -p /var/www/html/storage/uploads \
     && chown -R www-data:www-data /var/www/html/storage \
     && chmod -R 775 /var/www/html/storage
 
-# Apache config: allow .htaccess overrides
-RUN echo '<Directory /var/www/html>\n\
+# Apache config: allow .htaccess overrides and set ServerName
+RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf \
+    && echo '<Directory /var/www/html>\n\
     Options Indexes FollowSymLinks\n\
     AllowOverride All\n\
     Require all granted\n\
