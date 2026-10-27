@@ -44,8 +44,15 @@ try {
         exit;
     }
 
-    // Administrators are always pre-verified — log in immediately
+    // Administrators are always pre-verified — log in immediately and self-heal is_verified flag
     if ($user['role'] === 'admin') {
+        // Ensure admin is_verified is always 1 in the DB (self-healing)
+        if ((int)($user['is_verified'] ?? 0) !== 1) {
+            try {
+                $pdo->prepare("UPDATE users SET is_verified = 1 WHERE id = ?")->execute([$user['id']]);
+            } catch (Throwable $ignore) {}
+        }
+
         $userData = [
             'id'       => (int)$user['id'],
             'username' => $user['username'],
